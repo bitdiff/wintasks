@@ -18,8 +18,6 @@ namespace Bitdiff.WinTasks
         {
             tasks = tasks.ToList();
 
-            Disable(tasks);
-
             using (var ts = new TaskService())
             {
                 var path = Assembly.GetEntryAssembly().Location;
@@ -82,19 +80,19 @@ namespace Bitdiff.WinTasks
             definition.Settings.DisallowStartIfOnBatteries = false;
         }
 
-        public void OnTaskInstalledEvent(TaskEventArgs e)
+        private void OnTaskInstalledEvent(TaskEventArgs e)
         {
             var handler = TaskInstalledEvent;
             if (handler != null) handler(this, e);
         }
 
-        public void OnTaskDisabledEvent(TaskEventArgs e)
+        private void OnTaskDisabledEvent(TaskEventArgs e)
         {
             var handler = TaskDisabledEvent;
             if (handler != null) handler(this, e);
         }
 
-        public void OnWaitingForTaskToCompleteEvent(TaskEventArgs e)
+        private void OnWaitingForTaskToCompleteEvent(TaskEventArgs e)
         {
             var handler = WaitingForTaskToCompleteEvent;
             if (handler != null) handler(this, e);
