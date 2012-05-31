@@ -30,7 +30,7 @@ namespace Bitdiff.WinTasks
 
                     AddTrigger(definition, t);
 
-                    definition.Actions.Add(new ExecAction(path, t.Parameters, Path.GetDirectoryName(path)));
+                    definition.Actions.Add(new ExecAction(t.Path ?? path, t.Parameters, Path.GetDirectoryName(path)));
 
                     ts.RootFolder.RegisterTaskDefinition(
                         t.Name,

@@ -38,6 +38,14 @@
             A <see cref="T:Microsoft.Win32.TaskScheduler.Task"/> instance of the registered task.
             </returns>
         </member>
+        <member name="M:Microsoft.Win32.TaskScheduler.TaskService.FindAllTasks(System.Text.RegularExpressions.Regex,System.Boolean)">
+            <summary>
+            Finds all tasks matching a name or standard wildcards.
+            </summary>
+            <param name="name">Name of the task in regular expression form.</param>
+            <param name="searchAllFolders">if set to <c>true</c> search all sub folders.</param>
+            <returns>A <see cref="T:Task[]"/> of all tasks matching <paramref name="name"/>.</returns>
+        </member>
         <member name="M:Microsoft.Win32.TaskScheduler.TaskService.FindTask(System.String,System.Boolean)">
             <summary>
             Finds a task given a name and standard wildcards.
@@ -83,7 +91,15 @@
             <summary>
             Returns an empty task definition object to be filled in with settings and properties and then registered using the <see cref="M:Microsoft.Win32.TaskScheduler.TaskFolder.RegisterTaskDefinition(System.String,Microsoft.Win32.TaskScheduler.TaskDefinition)"/> method.
             </summary>
-            <returns><see cref="T:Microsoft.Win32.TaskScheduler.TaskDefinition"/> instance for setting properties.</returns>
+            <returns>A <see cref="T:Microsoft.Win32.TaskScheduler.TaskDefinition"/> instance for setting properties.</returns>
+        </member>
+        <member name="M:Microsoft.Win32.TaskScheduler.TaskService.NewTaskFromFile(System.String)">
+            <summary>
+            Returns a <see cref="T:Microsoft.Win32.TaskScheduler.TaskDefinition"/> populated with the properties defined in an XML file.
+            </summary>
+            <param name="xmlFile">The XML file to use as input.</param>
+            <returns>A <see cref="T:Microsoft.Win32.TaskScheduler.TaskDefinition"/> instance.</returns>
+            <exception cref="T:Microsoft.Win32.TaskScheduler.NotV1SupportedException">Importing from an XML file is only supported under Task Scheduler 2.0.</exception>
         </member>
         <member name="M:Microsoft.Win32.TaskScheduler.TaskService.StartSystemTaskSchedulerManager">
             <summary>
@@ -101,14 +117,15 @@
             Connects this instance of the <see cref="T:Microsoft.Win32.TaskScheduler.TaskService"/> class to a running Task Scheduler.
             </summary>
         </member>
-        <member name="M:Microsoft.Win32.TaskScheduler.TaskService.FindTaskInFolder(Microsoft.Win32.TaskScheduler.TaskFolder,System.Text.RegularExpressions.Regex,System.Boolean)">
+        <member name="M:Microsoft.Win32.TaskScheduler.TaskService.FindTaskInFolder(Microsoft.Win32.TaskScheduler.TaskFolder,System.Text.RegularExpressions.Regex,System.Collections.Generic.List{Microsoft.Win32.TaskScheduler.Task}@,System.Boolean)">
             <summary>
             Finds the task in folder.
             </summary>
             <param name="fld">The folder.</param>
             <param name="taskName">The wildcard expression to compare task names with.</param>
+            <param name="results">The results.</param>
             <param name="recurse">if set to <c>true</c> recurse folders.</param>
-            <returns>A <see cref="T:Microsoft.Win32.TaskScheduler.Task"/> if one matches <paramref name="taskName"/>, otherwise NULL.</returns>
+            <returns>True if any tasks are found, False if not.</returns>
         </member>
         <member name="P:Microsoft.Win32.TaskScheduler.TaskService.Connected">
             <summary>
@@ -443,6 +460,13 @@
             Releases all resources used by this class.
             </summary>
         </member>
+        <member name="M:Microsoft.Win32.TaskScheduler.Task.Export(System.String)">
+            <summary>
+            Exports the task to the specified file in XML.
+            </summary>
+            <param name="outputFileName">Name of the output file.</param>
+            <exception cref="T:Microsoft.Win32.TaskScheduler.NotV1SupportedException">Exporting to an XML file is only supported under Task Scheduler 2.0.</exception>
+        </member>
         <member name="M:Microsoft.Win32.TaskScheduler.Task.GetRunTimes(System.DateTime,System.DateTime,System.UInt32)">
             <summary>
             Gets the times that the registered task is scheduled to run during a specified time.
@@ -523,11 +547,13 @@
             <summary>
             Gets or sets a Boolean value that indicates if the registered task is enabled.
             </summary>
+            <remarks>As of version 1.8.1, under V1 systems (prior to Vista), this method will immediately set the enabled property and re-save the current task. If changes have been made to the <see cref="T:Microsoft.Win32.TaskScheduler.TaskDefinition"/>, then those changes will be saved.</remarks>
         </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Task.LastRunTime">
             <summary>
             Gets the time the registered task was last run.
             </summary>
+            <value>Returns <see cref="F:System.DateTime.MinValue"/> if there are no prior run times.</value>
         </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Task.LastTaskResult">
             <summary>
@@ -543,6 +569,13 @@
             <summary>
             Gets the time when the registered task is next scheduled to run.
             </summary>
+            <value>Returns <see cref="F:System.DateTime.MinValue"/> if there are no future run times.</value>
+            <remarks>
+            Potentially breaking change in release 1.8.2. For Task Scheduler 2.0, the return value prior to 1.8.2 would be Dec 30, 1899
+            if there were no future run times. For 1.0, that value would have been <c>DateTime.MinValue</c>. In release 1.8.2 and later, all 
+            versions will return <c>DateTime.MinValue</c> if there are no future run times. While this is different from the native 2.0
+            library, it was deemed more appropriate to have consistency between the two libraries and with other .NET libraries.
+            </remarks>
         </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Task.NumberOfMissedRuns">
             <summary>
@@ -599,6 +632,11 @@
         <member name="P:Microsoft.Win32.TaskScheduler.RunningTask.InstanceGuid">
             <summary>
             Gets the GUID identifier for this instance of the task.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Win32.TaskScheduler.RunningTask.State">
+            <summary>
+            Gets the operational state of the running task.
             </summary>
         </member>
         <member name="T:Microsoft.Win32.TaskScheduler.TaskDefinition">
@@ -1057,6 +1095,18 @@
             Gets or sets an XML-formatted definition of the task settings.
             </summary>
         </member>
+        <member name="T:Microsoft.Win32.TaskScheduler.TaskEnumGlobalizer">
+            <summary>
+            Functions to provide localized strings for enumerated types and values.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Win32.TaskScheduler.TaskEnumGlobalizer.GetString(System.Object)">
+            <summary>
+            Gets a string representing the localized value of the provided enum.
+            </summary>
+            <param name="enumValue">The enum value.</param>
+            <returns>A localized string, if available.</returns>
+        </member>
         <member name="T:Microsoft.Win32.TaskScheduler.TriggerCollection">
             <summary>
             Provides the methods that are used to add to, remove from, and get the triggers of a task.
@@ -1168,6 +1218,26 @@
             </summary>
             <param name="subFolderName">The name of the subfolder to be removed. The root task folder is specified with a backslash (\). This parameter can be a relative path to the folder you want to delete. An example of a task folder path, under the root task folder, is \MyTaskFolder. The '.' character cannot be used to specify the current task folder and the '..' characters cannot be used to specify the parent task folder in the path.</param>
         </member>
+        <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.DeleteTask(System.String)">
+            <summary>
+            Deletes a task from the folder.
+            </summary>
+            <param name="Name">The name of the task that is specified when the task was registered. The '.' character cannot be used to specify the current task folder and the '..' characters cannot be used to specify the parent task folder in the path.</param>
+        </member>
+        <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.GetSecurityDescriptor(System.Security.AccessControl.AccessControlSections)">
+            <summary>
+            Gets the security descriptor for the folder. Not available to Task Scheduler 1.0.
+            </summary>
+            <param name="includeSections">Section(s) of the security descriptor to return.</param>
+            <returns>The security descriptor for the folder.</returns>
+        </member>
+        <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.GetSecurityDescriptorSddlForm(System.Security.AccessControl.AccessControlSections)">
+            <summary>
+            Gets the security descriptor for the folder. Not available to Task Scheduler 1.0.
+            </summary>
+            <param name="includeSections">Section(s) of the security descriptor to return.</param>
+            <returns>The security descriptor for the folder.</returns>
+        </member>
         <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.GetTasks(System.Text.RegularExpressions.Regex)">
             <summary>
             Gets a collection of all the tasks in the folder whose name matches the optional <paramref name="filter"/>.
@@ -1175,11 +1245,14 @@
             <param name="filter">The optional name filter expression.</param>
             <returns>Collection of all matching tasks.</returns>
         </member>
-        <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.DeleteTask(System.String)">
+        <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.ImportTask(System.String,System.String)">
             <summary>
-            Deletes a task from the folder.
+            Imports a <see cref="T:Microsoft.Win32.TaskScheduler.Task"/> from an XML file.
             </summary>
-            <param name="Name">The name of the task that is specified when the task was registered. The '.' character cannot be used to specify the current task folder and the '..' characters cannot be used to specify the parent task folder in the path.</param>
+            <param name="Path">The task name. If this value is NULL, the task will be registered in the root task folder and the task name will be a GUID value that is created by the Task Scheduler service. A task name cannot begin or end with a space character. The '.' character cannot be used to specify the current task folder and the '..' characters cannot be used to specify the parent task folder in the path.</param>
+            <param name="xmlFile">The file containing the XML-formatted definition of the task.</param>
+            <returns>A <see cref="T:Microsoft.Win32.TaskScheduler.Task"/> instance that represents the new task.</returns>
+            <exception cref="T:Microsoft.Win32.TaskScheduler.NotV1SupportedException">Importing from an XML file is only supported under Task Scheduler 2.0.</exception>
         </member>
         <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.RegisterTask(System.String,System.String,Microsoft.Win32.TaskScheduler.TaskCreation,System.String,System.String,Microsoft.Win32.TaskScheduler.TaskLogonType,System.String)">
             <summary>
@@ -1193,6 +1266,7 @@
             <param name="LogonType">A <see cref="T:Microsoft.Win32.TaskScheduler.TaskLogonType"/> value that defines what logon technique is used to run the registered task.</param>
             <param name="sddl">The security descriptor associated with the registered task. You can specify the access control list (ACL) in the security descriptor for a task in order to allow or deny certain users and groups access to a task.</param>
             <returns>A <see cref="T:Microsoft.Win32.TaskScheduler.Task"/> instance that represents the new task.</returns>
+            <exception cref="T:Microsoft.Win32.TaskScheduler.NotV1SupportedException">Importing from an XML file is only supported under Task Scheduler 2.0.</exception>
         </member>
         <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.RegisterTaskDefinition(System.String,Microsoft.Win32.TaskScheduler.TaskDefinition)">
             <summary>
@@ -1214,20 +1288,6 @@
             <param name="LogonType">A <see cref="T:Microsoft.Win32.TaskScheduler.TaskLogonType"/> value that defines what logon technique is used to run the registered task.</param>
             <param name="sddl">The security descriptor associated with the registered task. You can specify the access control list (ACL) in the security descriptor for a task in order to allow or deny certain users and groups access to a task.</param>
             <returns>A <see cref="T:Microsoft.Win32.TaskScheduler.Task"/> instance that represents the new task.</returns>
-        </member>
-        <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.GetSecurityDescriptor(System.Security.AccessControl.AccessControlSections)">
-            <summary>
-            Gets the security descriptor for the folder. Not available to Task Scheduler 1.0.
-            </summary>
-            <param name="includeSections">Section(s) of the security descriptor to return.</param>
-            <returns>The security descriptor for the folder.</returns>
-        </member>
-        <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.GetSecurityDescriptorSddlForm(System.Security.AccessControl.AccessControlSections)">
-            <summary>
-            Gets the security descriptor for the folder. Not available to Task Scheduler 1.0.
-            </summary>
-            <param name="includeSections">Section(s) of the security descriptor to return.</param>
-            <returns>The security descriptor for the folder.</returns>
         </member>
         <member name="M:Microsoft.Win32.TaskScheduler.TaskFolder.SetSecurityDescriptor(System.Security.AccessControl.GenericSecurityDescriptor,System.Security.AccessControl.AccessControlSections)">
             <summary>
@@ -1272,16 +1332,16 @@
             Gets all the subfolders in the folder.
             </summary>
         </member>
+        <member name="P:Microsoft.Win32.TaskScheduler.TaskFolder.Tasks">
+            <summary>
+            Gets a collection of all the tasks in the folder.
+            </summary>
+        </member>
         <member name="P:Microsoft.Win32.TaskScheduler.TaskFolder.TaskService">
             <summary>
             Gets or sets the <see cref="P:Microsoft.Win32.TaskScheduler.TaskFolder.TaskService"/> that manages this task.
             </summary>
             <value>The task service.</value>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.TaskFolder.Tasks">
-            <summary>
-            Gets a collection of all the tasks in the folder.
-            </summary>
         </member>
         <member name="T:Microsoft.Win32.TaskScheduler.TaskFolderCollection">
             <summary>
@@ -1376,41 +1436,6 @@
               Looks up a localized string similar to every day.
             </summary>
         </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.DOWFriday">
-            <summary>
-              Looks up a localized string similar to Friday.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.DOWMonday">
-            <summary>
-              Looks up a localized string similar to Monday.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.DOWSaturday">
-            <summary>
-              Looks up a localized string similar to Saturday.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.DOWSunday">
-            <summary>
-              Looks up a localized string similar to Sunday.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.DOWThursday">
-            <summary>
-              Looks up a localized string similar to Thursday.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.DOWTuesday">
-            <summary>
-              Looks up a localized string similar to Tuesday.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.DOWWednesday">
-            <summary>
-              Looks up a localized string similar to Wednesday.
-            </summary>
-        </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.EmailAction">
             <summary>
               Looks up a localized string similar to {1} {0}.
@@ -1426,6 +1451,11 @@
               Looks up a localized string similar to {0} {1}.
             </summary>
         </member>
+        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.HyphenSeparator">
+            <summary>
+              Looks up a localized string similar to  -.
+            </summary>
+        </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.ListSeparator">
             <summary>
               Looks up a localized string similar to , .
@@ -1434,66 +1464,6 @@
         <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYAllMonths">
             <summary>
               Looks up a localized string similar to every month.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYApril">
-            <summary>
-              Looks up a localized string similar to April.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYAugust">
-            <summary>
-              Looks up a localized string similar to August.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYDecember">
-            <summary>
-              Looks up a localized string similar to December.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYFebruary">
-            <summary>
-              Looks up a localized string similar to February.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYJanuary">
-            <summary>
-              Looks up a localized string similar to January.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYJuly">
-            <summary>
-              Looks up a localized string similar to July.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYJune">
-            <summary>
-              Looks up a localized string similar to June.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYMarch">
-            <summary>
-              Looks up a localized string similar to March.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYMay">
-            <summary>
-              Looks up a localized string similar to May.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYNovember">
-            <summary>
-              Looks up a localized string similar to November.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYOctober">
-            <summary>
-              Looks up a localized string similar to October.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MOYSeptember">
-            <summary>
-              Looks up a localized string similar to September.
             </summary>
         </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.MultipleActions">
@@ -1546,26 +1516,6 @@
               Looks up a localized string similar to any user.
             </summary>
         </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerBase1">
-            <summary>
-              Looks up a localized string similar to After triggered, repeat every.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerBase2">
-            <summary>
-              Looks up a localized string similar to indefinitely.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerBase3">
-            <summary>
-              Looks up a localized string similar to for a duration of.
-            </summary>
-        </member>
-        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerBase4">
-            <summary>
-              Looks up a localized string similar to Trigger expires at.
-            </summary>
-        </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerBoot1">
             <summary>
               Looks up a localized string similar to At system startup.
@@ -1579,6 +1529,21 @@
         <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerDaily2">
             <summary>
               Looks up a localized string similar to At {0:t} every {1} days.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerDuration0">
+            <summary>
+              Looks up a localized string similar to  indefinitely.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerDurationNot0">
+            <summary>
+              Looks up a localized string similar to  for a duration of {0}.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerEndBoundary">
+            <summary>
+              Looks up a localized string similar to  Trigger expires at {0:G}..
             </summary>
         </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerEvent1">
@@ -1624,6 +1589,11 @@
         <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerRegistration1">
             <summary>
               Looks up a localized string similar to When the task is created or modified.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerRepetition">
+            <summary>
+              Looks up a localized string similar to  After triggered, repeat every {0}{1}..
             </summary>
         </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Properties.Resources.TriggerSessionConsoleConnect">
@@ -1948,6 +1918,13 @@
             <summary>
             Returns the action Id.
             </summary>
+            <returns>String representation of action.</returns>
+        </member>
+        <member name="M:Microsoft.Win32.TaskScheduler.Action.ToString(System.Globalization.CultureInfo)">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this action.
+            </summary>
+            <param name="culture">The culture.</param>
             <returns>String representation of action.</returns>
         </member>
         <member name="M:Microsoft.Win32.TaskScheduler.Action.CreateAction(Microsoft.Win32.TaskScheduler.V2Interop.IAction)">
@@ -2660,6 +2637,13 @@
             </summary>
             <returns>String value of trigger.</returns>
         </member>
+        <member name="M:Microsoft.Win32.TaskScheduler.Trigger.ToString(System.Globalization.CultureInfo)">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents this trigger in a specific language.
+            </summary>
+            <param name="culture">The language of the resulting string.</param>
+            <returns>String value of trigger.</returns>
+        </member>
         <member name="M:Microsoft.Win32.TaskScheduler.Trigger.CreateTrigger(Microsoft.Win32.TaskScheduler.TaskTriggerType)">
             <summary>
             Creates the specified trigger.
@@ -2699,6 +2683,14 @@
             <summary>
             Gets or sets the date and time when the trigger is deactivated. The trigger cannot start the task after it is deactivated.
             </summary>
+            <remarks>
+            <para>Version 1 (1.1 on all systems prior to Vista) of the native library only allows for the Day, Month and Year values of the <see cref="T:System.DateTime"/> structure.</para>
+            <para>Version 2 (1.2 or higher) of the native library only allows for both date and time and all <see cref="P:System.DateTime.Kind"/> values. However, the user interface and <see cref="M:Microsoft.Win32.TaskScheduler.Trigger.ToString"/> methods
+            will always show the time translated to local time. The library makes every attempt to maintain the Kind value. When using the UI elements provided in the TaskSchedulerEditor
+            library, the "Synchronize across time zones" checkbox will be checked if the Kind is Local or Utc. If the Kind is Unspecified and the user selects the checkbox, the Kind will
+            be changed to Utc and the time adjusted from the value displayed as the local time.
+            </para>
+            </remarks>
         </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Trigger.ExecutionTimeLimit">
             <summary>
@@ -2719,6 +2711,24 @@
             <summary>
             Gets or sets the date and time when the trigger is activated.
             </summary>
+            <remarks>
+            <para>Version 1 (1.1 on all systems prior to Vista) of the native library only allows for <see cref="T:System.DateTime"/> values where the <see cref="P:System.DateTime.Kind"/> is unspecified.
+            If the DateTime value Kind is <see cref="F:System.DateTimeKind.Local"/> then it will be used as is. If the DateTime value Kind is <see cref="F:System.DateTimeKind.Utc"/> then it will be 
+            converted to the local time and then used.
+            </para>
+            <para>Version 2 (1.2 or higher) of the native library only allows for all <see cref="P:System.DateTime.Kind"/> values. However, the user interface and <see cref="M:Microsoft.Win32.TaskScheduler.Trigger.ToString"/> methods
+            will always show the time translated to local time. The library makes every attempt to maintain the Kind value. When using the UI elements provided in the TaskSchedulerEditor
+            library, the "Synchronize across time zones" checkbox will be checked if the Kind is Local or Utc. If the Kind is Unspecified and the user selects the checkbox, the Kind will
+            be changed to Utc and the time adjusted from the value displayed as the local time.
+            </para>
+            <para>Under Version 2, when converting the string used in the native library for this value (ITrigger.Startboundary) this library will behave as follows:
+            <list type="bullet">
+            <item><description>YYYY-MM-DDTHH:MM:SS format uses DateTimeKind.Unspecified and the time specified.</description></item>
+            <item><description>YYYY-MM-DDTHH:MM:SSZ format uses DateTimeKind.Utc and the time specified as the GMT time.</description></item>
+            <item><description>YYYY-MM-DDTHH:MM:SS±HH:MM format uses DateTimeKind.Local and the time specified in that time zone.</description></item>
+            </list>
+            </para>
+            </remarks>
         </member>
         <member name="P:Microsoft.Win32.TaskScheduler.Trigger.TriggerType">
             <summary>
