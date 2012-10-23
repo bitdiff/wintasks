@@ -73,7 +73,7 @@ namespace Bitdiff.WinTasks
             var trigger = (TimeTrigger)definition.Triggers.Add(new TimeTrigger());
 
             trigger.StartBoundary = DateTime.Now;
-            trigger.Repetition.Interval = TimeSpan.FromMinutes(task.RunsEveryHowManyMinutes);
+            trigger.Repetition.Interval = task.Interval;
 
             definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
             definition.Settings.StopIfGoingOnBatteries = false;

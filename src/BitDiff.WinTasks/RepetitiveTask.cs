@@ -1,4 +1,6 @@
-﻿namespace Bitdiff.WinTasks
+﻿using System;
+
+namespace Bitdiff.WinTasks
 {
     public class RepetitiveTask
     {
@@ -6,6 +8,6 @@
         public string Description { get; set; }
         public string Path { get; set; }
         public string Parameters { get; set; }
-        public int RunsEveryHowManyMinutes { get; set; }
+        public TimeSpan Interval { get; set; }
     }
 }
