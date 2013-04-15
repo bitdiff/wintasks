@@ -9,5 +9,6 @@ namespace Bitdiff.WinTasks
         public string Path { get; set; }
         public string Parameters { get; set; }
         public TimeSpan Interval { get; set; }
+        public DateTime? StartAt { get; set; }
     }
 }
