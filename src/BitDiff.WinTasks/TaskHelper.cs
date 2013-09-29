@@ -70,12 +70,26 @@ namespace Bitdiff.WinTasks
 
         private void AddTrigger(TaskDefinition definition, RepetitiveTask task)
         {
-            var trigger = (TimeTrigger)definition.Triggers.Add(new TimeTrigger());
+            switch (task.Type)
+            {
+                case RepetitiveTaskType.Daily:
+                    {
+                        var trigger = (DailyTrigger)definition.Triggers.Add(new DailyTrigger());
+                        trigger.StartBoundary = task.StartAt.HasValue ? task.StartAt.Value : DateTime.Now;
+                    }
+                    break;
+                case RepetitiveTaskType.Interval:
+                    {
+                        var trigger = (TimeTrigger)definition.Triggers.Add(new TimeTrigger());
+                        trigger.StartBoundary = task.StartAt.HasValue ? task.StartAt.Value : DateTime.Now;
+                        trigger.Repetition.Interval = task.Interval;
+                    }
+                    break;
+                default:
+                    throw new NotSupportedException("The task type is not supported.");
+            }
 
-            trigger.StartBoundary = task.StartAt.HasValue ? task.StartAt.Value : DateTime.Now;
-            trigger.Repetition.Interval = task.Interval;
-
-            definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
+            //definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
             definition.Settings.StopIfGoingOnBatteries = false;
             definition.Settings.DisallowStartIfOnBatteries = false;
         }
