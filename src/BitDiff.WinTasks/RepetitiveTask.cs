@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.Win32.TaskScheduler;
 
 namespace Bitdiff.WinTasks
 {
@@ -11,5 +12,7 @@ namespace Bitdiff.WinTasks
         public string Parameters { get; set; }
         public TimeSpan Interval { get; set; }
         public DateTime? StartAt { get; set; }
+        public DaysOfTheWeek DaysOfWeek { get; set; }
+        public int DayOfMonth { get; set; }
     }
 }

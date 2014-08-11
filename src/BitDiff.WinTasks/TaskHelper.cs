@@ -13,6 +13,7 @@ namespace Bitdiff.WinTasks
         public event EventHandler<TaskEventArgs> TaskInstalledEvent;
         public event EventHandler<TaskEventArgs> WaitingForTaskToCompleteEvent;
         public event EventHandler<TaskEventArgs> TaskDisabledEvent;
+        public event EventHandler<TaskEventArgs> TaskDeletedEvent;
 
         public void Install(IEnumerable<RepetitiveTask> tasks)
         {
@@ -54,17 +55,42 @@ namespace Bitdiff.WinTasks
                     var task = ts.GetTask(t.Name);
                     if (task != null)
                     {
-                        while (task.State == TaskState.Running)
-                        {
-                            OnWaitingForTaskToCompleteEvent(new TaskEventArgs { Task = t });
-                            Thread.Sleep(500);
-                        }
+                        WaitForTaskToComplete(task, t);
 
-                        OnTaskDisabledEvent(new TaskEventArgs { Task = t });
                         task.Enabled = false;
                         task.RegisterChanges();
+
+                        OnTaskDisabledEvent(new TaskEventArgs { Task = t });
                     }
                 }
+            }
+        }
+
+        public void Delete(IEnumerable<RepetitiveTask> tasks)
+        {
+            using (var ts = new TaskService())
+            {
+                foreach (var t in tasks)
+                {
+                    var task = ts.GetTask(t.Name);
+                    if (task != null)
+                    {
+                        WaitForTaskToComplete(task, t);
+
+                        ts.RootFolder.DeleteTask(t.Name);
+
+                        OnTaskDeletedEvent(new TaskEventArgs { Task = t });
+                    }
+                }
+            }
+        }
+
+        private void WaitForTaskToComplete(Task task, RepetitiveTask t)
+        {
+            while (task.State == TaskState.Running)
+            {
+                OnWaitingForTaskToCompleteEvent(new TaskEventArgs { Task = t });
+                Thread.Sleep(500);
             }
         }
 
@@ -75,6 +101,19 @@ namespace Bitdiff.WinTasks
                 case RepetitiveTaskType.Daily:
                     {
                         var trigger = (DailyTrigger)definition.Triggers.Add(new DailyTrigger());
+                        trigger.StartBoundary = task.StartAt.HasValue ? task.StartAt.Value : DateTime.Now;
+                    }
+                    break;
+                case RepetitiveTaskType.Weekly:
+                    {
+                        var trigger = (WeeklyTrigger)definition.Triggers.Add(new WeeklyTrigger(task.DaysOfWeek));
+                        trigger.StartBoundary = task.StartAt.HasValue ? task.StartAt.Value : DateTime.Now;
+                    }
+                    break;
+
+                case RepetitiveTaskType.Monthly:
+                    {
+                        var trigger = (MonthlyTrigger)definition.Triggers.Add(new MonthlyTrigger(task.DayOfMonth));
                         trigger.StartBoundary = task.StartAt.HasValue ? task.StartAt.Value : DateTime.Now;
                     }
                     break;
@@ -89,7 +128,6 @@ namespace Bitdiff.WinTasks
                     throw new NotSupportedException("The task type is not supported.");
             }
 
-            //definition.Settings.MultipleInstances = TaskInstancesPolicy.IgnoreNew;
             definition.Settings.StopIfGoingOnBatteries = false;
             definition.Settings.DisallowStartIfOnBatteries = false;
         }
@@ -103,6 +141,12 @@ namespace Bitdiff.WinTasks
         private void OnTaskDisabledEvent(TaskEventArgs e)
         {
             var handler = TaskDisabledEvent;
+            if (handler != null) handler(this, e);
+        }
+
+        private void OnTaskDeletedEvent(TaskEventArgs e)
+        {
+            var handler = TaskDeletedEvent;
             if (handler != null) handler(this, e);
         }
 

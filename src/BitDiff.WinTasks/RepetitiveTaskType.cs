@@ -3,6 +3,8 @@
     public enum RepetitiveTaskType
     {
         Interval,
-        Daily
+        Daily,
+        Weekly,
+        Monthly
     }
 }
